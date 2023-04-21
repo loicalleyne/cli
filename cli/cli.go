@@ -115,7 +115,7 @@ func (cli *Cli) recurseManPage(c []command.Command, rootCommands []string, offse
 		}
 		fmt.Printf("[%s]: %s\n", cmd.Name, cmd.ManPage)
 		if len(cmd.SubCommands) > 0 {
-			cli.recurseHelp(cmd.SubCommands, rootCommands, offset+1)
+			cli.recurseManPage(cmd.SubCommands, rootCommands, offset+1)
 		}
 	}
 }
