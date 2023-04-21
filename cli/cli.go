@@ -96,7 +96,9 @@ func (cli *Cli) recurseHelp(c []command.Command, rootCommands []string, offset i
 				offset = 0
 			}
 		}
-		fmt.Printf("[%s]: %s\n", cmd.Name, cmd.Help)
+		if cmd.Name != "." {
+			fmt.Printf("[%s]: %s\n", cmd.Name, cmd.Help)
+		}
 		if len(cmd.SubCommands) > 0 {
 			cli.recurseHelp(cmd.SubCommands, rootCommands, offset+1)
 		}
@@ -157,11 +159,20 @@ func (cli *Cli) parseSystemCommands(input []string) error {
 	if input[0] == "man" {
 		switch i := len(input); i {
 		case 1:
-			var rootCommands []string
+			var rootCommandsNames []string
+			var rootCommands []command.Command
 			for _, r := range cli.Commands {
-				rootCommands = append(rootCommands, r.Name)
+				if r.ManPage != "" {
+					rootCommandsNames = append(rootCommandsNames, r.Name)
+					rootCommands = append(rootCommands, r)
+				}
 			}
-			cli.recurseManPage(cli.Commands, rootCommands, 0)
+			if len(rootCommandsNames) > 0 {
+				cli.recurseManPage(rootCommands, rootCommandsNames, 0)
+			} else {
+				fmt.Println("no manpages found")
+			}
+
 		default:
 			var rootCommandsNames []string
 			var rootCommands []command.Command
@@ -171,9 +182,11 @@ func (cli *Cli) parseSystemCommands(input []string) error {
 					if cmd == r.Name && r.ManPage != "" {
 						rootCommandsNames = append(rootCommandsNames, r.Name)
 						rootCommands = append(rootCommands, r)
-					} else {
-						unfound = append(unfound, cmd)
+						break
 					}
+				}
+				if len(rootCommandsNames) > 0 && rootCommandsNames[len(rootCommandsNames)-1] != cmd {
+					unfound = append(unfound, cmd)
 				}
 			}
 			if len(unfound) > 0 {
@@ -181,6 +194,8 @@ func (cli *Cli) parseSystemCommands(input []string) error {
 			}
 			if len(rootCommandsNames) > 0 {
 				cli.recurseManPage(rootCommands, rootCommandsNames, 0)
+			} else {
+				fmt.Println("no manpages found")
 			}
 		}
 	}
