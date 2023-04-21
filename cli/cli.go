@@ -165,18 +165,22 @@ func (cli *Cli) parseSystemCommands(input []string) error {
 		default:
 			var rootCommandsNames []string
 			var rootCommands []command.Command
+			var unfound []string
 			for _, cmd := range input[1:] {
 				for _, r := range cli.Commands {
-					if cmd == r.Name {
+					if cmd == r.Name && r.ManPage != "" {
 						rootCommandsNames = append(rootCommandsNames, r.Name)
 						rootCommands = append(rootCommands, r)
+					} else {
+						unfound = append(unfound, cmd)
 					}
 				}
 			}
+			if len(unfound) > 0 {
+				fmt.Println("manpage not found for command(s) %v", unfound)
+			}
 			if len(rootCommandsNames) > 0 {
 				cli.recurseManPage(rootCommands, rootCommandsNames, 0)
-			} else {
-				fmt.Println("command(s) not found")
 			}
 		}
 	}
