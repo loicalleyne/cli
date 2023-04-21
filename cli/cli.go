@@ -88,6 +88,9 @@ func (cli *Cli) recurseCompletion(c []command.Command, pc *readline.PrefixComple
 
 func (cli *Cli) recurseHelp(c []command.Command, rootCommands []string, offset int) {
 	for _, cmd := range c {
+		if cmd.Name != "." {
+			continue
+		}
 		for i := 0; i < offset; i++ {
 			fmt.Printf("\t")
 		}
@@ -96,9 +99,7 @@ func (cli *Cli) recurseHelp(c []command.Command, rootCommands []string, offset i
 				offset = 0
 			}
 		}
-		if cmd.Name != "." {
-			fmt.Printf("[%s]: %s\n", cmd.Name, cmd.Help)
-		}
+		fmt.Printf("[%s]: %s\n", cmd.Name, cmd.Help)
 		if len(cmd.SubCommands) > 0 {
 			cli.recurseHelp(cmd.SubCommands, rootCommands, offset+1)
 		}
