@@ -3,8 +3,8 @@ package main
 import (
 	"testing"
 
-	"github.com/AlexsJones/cli/cli"
-	"github.com/AlexsJones/cli/command"
+	"github.com/loicalleyne/cli/cli"
+	"github.com/loicalleyne/cli/command"
 )
 
 /*********************************************************************************
@@ -15,7 +15,6 @@ import (
 *     Description         :
 **********************************************************************************/
 func TestAddCommand(t *testing.T) {
-
 	cli := cli.NewCli()
 
 	cli.AddCommand(command.Command{})

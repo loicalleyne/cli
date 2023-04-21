@@ -1,10 +1,6 @@
 # cli
 
-[![Build Status](https://travis-ci.org/AlexsJones/cli.svg?branch=master)](https://travis-ci.org/AlexsJones/cli)
-
-[![GoDoc](https://godoc.org/github.com/AlexsJones/cli/cli?status.svg)](https://godoc.org/github.com/AlexsJones/cli/cli)
-
-[![Maintainability](https://api.codeclimate.com/v1/badges/3a06871c361d5e8e70ae/maintainability)](https://codeclimate.com/github/AlexsJones/cli/maintainability)
+Credits: Fork of github.com/AlexsJones/cli/  
 
 This is a simple interactive prompt for go that actually supports sub-commands, because I couldn't find one that did...
 Supports unlimited subcommand nesting.
@@ -42,7 +38,7 @@ submodule sub commands:
 # Installation
 
 ```
-go get github.com/AlexsJones/cli/cli
+go get github.com/loicalleyne/cli/cli
 ```
 # Simple example
 
@@ -52,8 +48,8 @@ package main
 import (
 	"fmt"
 
-	"github.com/AlexsJones/cli/cli"
-	"github.com/AlexsJones/cli/command"
+	"github.com/loicalleyne/cli/cli"
+	"github.com/loicalleyne/cli/command"
 )
 
 func main() {
@@ -89,8 +85,8 @@ package main
 import (
 	"fmt"
 
-	"github.com/AlexsJones/cli/cli"
-	"github.com/AlexsJones/cli/command"
+	"github.com/loicalleyne/cli/cli"
+	"github.com/loicalleyne/cli/command"
 )
 
 func main() {
