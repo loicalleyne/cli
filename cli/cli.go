@@ -129,20 +129,52 @@ func (cli *Cli) parseSystemCommands(input []string) error {
 		print("\033[H\033[2J")
 	}
 	if input[0] == "help" {
-
-		var rootCommands []string
-		for _, r := range cli.Commands {
-			rootCommands = append(rootCommands, r.Name)
+		switch i := len(input); i {
+		case 1:
+			var rootCommands []string
+			for _, r := range cli.Commands {
+				rootCommands = append(rootCommands, r.Name)
+			}
+			cli.recurseHelp(cli.Commands, rootCommands, 0)
+		default:
+			var rootCommands []string
+			for _, cmd := range input[1:] {
+				for _, r := range cli.Commands {
+					if cmd == r.Name {
+						rootCommands = append(rootCommands, r.Name)
+					}
+				}
+			}
+			if len(rootCommands) > 0 {
+				cli.recurseHelp(cli.Commands, rootCommands, 0)
+			} else {
+				fmt.Println("command(s) not found")
+			}
 		}
-		cli.recurseHelp(cli.Commands, rootCommands, 0)
 	}
 	if input[0] == "man" {
-
-		var rootCommands []string
-		for _, r := range cli.Commands {
-			rootCommands = append(rootCommands, r.Name)
+		switch i := len(input); i {
+		case 1:
+			var rootCommands []string
+			for _, r := range cli.Commands {
+				rootCommands = append(rootCommands, r.Name)
+			}
+			cli.recurseManPage(cli.Commands, rootCommands, 0)
+		default:
+			var rootCommands []string
+			for _, cmd := range input[1:] {
+				for _, r := range cli.Commands {
+					if cmd == r.Name {
+						rootCommands = append(rootCommands, r.Name)
+					}
+				}
+			}
+			if len(rootCommands) > 0 {
+				cli.recurseManPage(cli.Commands, rootCommands, 0)
+			} else {
+				fmt.Println("command(s) not found")
+			}
 		}
-		cli.recurseManPage(cli.Commands, rootCommands, 0)
 	}
 
 	return nil
