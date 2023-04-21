@@ -88,7 +88,7 @@ func (cli *Cli) recurseCompletion(c []command.Command, pc *readline.PrefixComple
 
 func (cli *Cli) recurseHelp(c []command.Command, rootCommands []string, offset int) {
 	for _, cmd := range c {
-		if cmd.Name != "." {
+		if cmd.Name == "." {
 			continue
 		}
 		for i := 0; i < offset; i++ {
