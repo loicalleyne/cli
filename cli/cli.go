@@ -270,7 +270,7 @@ func (cli *Cli) Run() {
 
 	for {
 		// Get user input
-		fmt.Print(">>>")
+		fmt.Print(cli.Scanner.Config.Prompt)
 
 		text := cli.readline()
 
