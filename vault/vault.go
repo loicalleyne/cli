@@ -20,7 +20,9 @@ func CreateNewKeepassDatabase(path, fileName, masterPassword, groupName string) 
 	db.Content.Root.Groups = append(db.Content.Root.Groups, rootGroup)
 
 	// Lock entries using stream cipher
-	db.LockProtectedEntries()
+	if err := db.LockProtectedEntries(); err != nil {
+		return err
+	}
 
 	// Write the database to a new file
 	filePath := path + "/" + fileName
@@ -51,7 +53,9 @@ func OpenKeepassDatabase(dbPath, masterPassword string) (*gokeepasslib.Database,
 		return nil, err
 	}
 
-	db.UnlockProtectedEntries()
+	if err := db.UnlockProtectedEntries(); err != nil {
+		return nil, err
+	}
 
 	return db, nil
 }
@@ -113,8 +117,14 @@ func SaveGroupEntry(group *gokeepasslib.Group, title, username, password string)
 	group.Entries = append(group.Entries, newEntry)
 }
 
-func CloseDB(db *gokeepasslib.Database) {
-	db.LockProtectedEntries()
+func CloseDB(db *gokeepasslib.Database) error {
+	if db != nil {
+		if err := db.LockProtectedEntries(); err != nil {
+			return err
+		}
+		db = nil
+	}
+	return nil
 }
 
 func PromptCredentials() (string, string, error) {
