@@ -2,10 +2,8 @@
 
 Credits: Fork of github.com/AlexsJones/cli/  
 
-This is a simple interactive prompt for go that actually supports sub-commands, because I couldn't find one that did...
+This is a simple interactive prompt for go that actually supports sub-commands.
 Supports unlimited subcommand nesting.
-
-It is ultra light weight and whilst is no where near as good as Cobra, it might be useful to someone.
 
 It looks a bit like this (Once you wire up your commands: see example):
 ```

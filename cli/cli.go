@@ -11,6 +11,7 @@ import (
 	"github.com/chzyer/readline"
 	"github.com/fatih/color"
 	"github.com/loicalleyne/cli/command"
+	"github.com/loicalleyne/cli/vault"
 )
 
 // Cli structure contains configuration and commands
@@ -18,6 +19,7 @@ type Cli struct {
 	Commands       []command.Command
 	ReadlineConfig *readline.Config
 	Scanner        *readline.Instance
+	Vault          vault.Database
 }
 
 func filterInput(r rune) (rune, bool) {
