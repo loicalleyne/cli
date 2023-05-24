@@ -99,7 +99,7 @@ func GetGroup(db *gokeepasslib.Database, groupName string) *gokeepasslib.Group {
 
 func GetGroupEntry(group *gokeepasslib.Group, title string) *gokeepasslib.Entry {
 	for _, entry := range group.Entries {
-		if entry.Get("Title") == title {
+		if entry.GetTitle() == title {
 			return &entry
 		}
 	}
@@ -108,10 +108,10 @@ func GetGroupEntry(group *gokeepasslib.Group, title string) *gokeepasslib.Entry 
 
 func SaveGroupEntry(group *gokeepasslib.Group, title, username, password string) {
 	newEntry := gokeepasslib.Entry{
-		Values: gokeepasslib.Values{
-			gokeepasslib.ValueData{Key: "Title", Value: title},
-			gokeepasslib.ValueData{Key: "Username", Value: username},
-			gokeepasslib.ValueData{Key: "Password", Value: password},
+		Values: []gokeepasslib.ValueData{
+			{Key: "Title", Value: gokeepasslib.V{Content: title}},
+			{Key: "Username", Value: gokeepasslib.V{Content: username}},
+			{Key: "Password", Value: gokeepasslib.V{Content: password}},
 		},
 	}
 	group.Entries = append(group.Entries, newEntry)
@@ -133,7 +133,7 @@ func PromptDBPath() (string, error) {
 
 	dbPath, err := pathPrompt.RunPrompt()
 	if err != nil {
-		return "", "", err
+		return "", err
 	}
 	return dbPath, nil
 }

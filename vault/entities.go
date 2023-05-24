@@ -5,6 +5,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/pterm/pterm"
 	"github.com/tobischo/gokeepasslib/v3"
 )
 
