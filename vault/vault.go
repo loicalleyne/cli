@@ -127,16 +127,27 @@ func CloseDB(db *gokeepasslib.Database) error {
 	return nil
 }
 
-func PromptCredentials() (string, string, error) {
-	pathPrompt := textinput.New("Enter the path to the KeePass database: ")
+func PromptDBPath() (string, error) {
+	pathPrompt := textinput.New("Path to vault database: ")
 	pathPrompt.Placeholder = "path cannot be empty"
 
 	dbPath, err := pathPrompt.RunPrompt()
 	if err != nil {
 		return "", "", err
 	}
+	return dbPath, nil
+}
 
-	passPrompt := textinput.New("Enter the Keepass database password:")
+func PromptEntryCredentials() (string, string, error) {
+	userPrompt := textinput.New("Username: ")
+	userPrompt.Placeholder = "Enter username"
+
+	username, err := userPrompt.RunPrompt()
+	if err != nil {
+		return "", "", err
+	}
+
+	passPrompt := textinput.New("Password:")
 	passPrompt.Placeholder = "Enter password"
 	passPrompt.Validate = func(s string) error {
 		if len(s) < 1 {
@@ -156,5 +167,29 @@ func PromptCredentials() (string, string, error) {
 		return "", "", err
 	}
 
-	return dbPath, password, nil
+	return username, password, nil
+}
+
+func DbUnlockPrompt() (string, error) {
+	passPrompt := textinput.New("Enter the Keepass database password:")
+	passPrompt.Placeholder = "Enter password"
+	passPrompt.Validate = func(s string) error {
+		if len(s) < 1 {
+			return fmt.Errorf("password cannot be empty")
+		}
+
+		return nil
+	}
+	passPrompt.Hidden = true
+	passPrompt.Template += `
+			{{- if .ValidationError -}}
+				{{- print " " (Foreground "1" .ValidationError.Error) -}}
+			{{- end -}}`
+
+	password, err := passPrompt.RunPrompt()
+	if err != nil {
+		return "", err
+	}
+
+	return password, nil
 }
