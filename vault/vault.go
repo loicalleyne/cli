@@ -294,6 +294,12 @@ func PromptEntryCredentials(titleRequired bool, titleOverride string) (string, s
 		if err != nil {
 			return "", "", "", err
 		}
+	} else {
+		if titleOverride != "" {
+			title = titleOverride
+		} else {
+			return "", "", "", fmt.Errorf("override title not provided")
+		}
 	}
 	userPrompt := textinput.New("Username: ")
 	userPrompt.Placeholder = "Enter username"
