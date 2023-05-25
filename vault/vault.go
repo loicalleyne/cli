@@ -4,20 +4,35 @@ import (
 	"fmt"
 	"os"
 
+	"go.uber.org/atomic"
+
 	"github.com/erikgeiser/promptkit/textinput"
 	"github.com/tobischo/gokeepasslib/v3"
+	w "github.com/tobischo/gokeepasslib/v3/wrappers"
 )
 
-type Database *gokeepasslib.Database
+type (
+	Database  *gokeepasslib.Database
+	VaultInfo struct {
+		Unlocked       atomic.Bool
+		DBPath         string
+		DBName         string
+		DBFileName     string
+		MasterPassword string
+	}
+)
 
-func CreateNewKeepassDatabase(path, fileName, masterPassword, groupName string) error {
-	db := gokeepasslib.NewDatabase()
-	db.Content.Meta.DatabaseName = groupName
-	db.Credentials = gokeepasslib.NewPasswordCredentials(masterPassword)
+func CreateNewKeepassDatabase(v *VaultInfo, groupName string) error {
+	db := gokeepasslib.NewDatabase(gokeepasslib.WithDatabaseKDBXVersion4())
+
+	db.Credentials = gokeepasslib.NewPasswordCredentials(v.MasterPassword)
+	db.Content.Meta.DatabaseName = v.DBName
+	db.Content.Root = gokeepasslib.NewRootData()
 
 	// Add a new group with the provided name
-	rootGroup := gokeepasslib.Group{Name: groupName}
-	db.Content.Root.Groups = append(db.Content.Root.Groups, rootGroup)
+	newGroup := gokeepasslib.NewGroup()
+	newGroup.Name = groupName
+	db.Content.Root.Groups[0] = newGroup
 
 	// Lock entries using stream cipher
 	if err := db.LockProtectedEntries(); err != nil {
@@ -25,7 +40,7 @@ func CreateNewKeepassDatabase(path, fileName, masterPassword, groupName string) 
 	}
 
 	// Write the database to a new file
-	filePath := path + "/" + fileName
+	filePath := v.DBPath + "/" + v.DBFileName
 	file, err := os.Create(filePath)
 	if err != nil {
 		return err
@@ -40,14 +55,14 @@ func CreateNewKeepassDatabase(path, fileName, masterPassword, groupName string) 
 	return nil
 }
 
-func OpenKeepassDatabase(dbPath, masterPassword string) (*gokeepasslib.Database, error) {
-	file, err := os.Open(dbPath)
+func OpenKeepassDatabase(v *VaultInfo) (*gokeepasslib.Database, error) {
+	file, err := os.Open(v.DBPath + "/" + v.DBFileName)
 	if err != nil {
 		return nil, err
 	}
 
 	db := gokeepasslib.NewDatabase()
-	db.Credentials = gokeepasslib.NewPasswordCredentials(masterPassword)
+	db.Credentials = gokeepasslib.NewPasswordCredentials(v.MasterPassword)
 	err = gokeepasslib.NewDecoder(file).Decode(db)
 	if err != nil {
 		return nil, err
@@ -62,68 +77,148 @@ func OpenKeepassDatabase(dbPath, masterPassword string) (*gokeepasslib.Database,
 
 //		if top-level group, pass in nil parentGroup and append new group to db.Content.Root.Groups
 //	 	if sub-group, pass in parentGroup and append new group to parentGroup.Groups
-func NewGroup(db *gokeepasslib.Database, parentGroup *gokeepasslib.Group, groupName string) {
+func NewGroup(db *gokeepasslib.Database, v *VaultInfo, parentGroup *gokeepasslib.Group, groupName string) error {
 	var targetGroup *gokeepasslib.Group
 	// top-level group creation
 	if parentGroup == nil {
-		for _, group := range db.Content.Root.Groups {
+		for i, group := range db.Content.Root.Groups[0].Groups {
 			if group.Name == groupName {
-				targetGroup = &group
+				targetGroup = &db.Content.Root.Groups[0].Groups[i]
 				break
 			}
 		}
-
+		// sub-group of root
 		if targetGroup == nil {
-			targetGroup = &gokeepasslib.Group{
-				Name: groupName,
-			}
-			db.Content.Root.Groups = append(db.Content.Root.Groups, *targetGroup)
+			g := gokeepasslib.NewGroup()
+			g.Name = groupName
+			db.Content.Root.Groups[0].Groups = append(db.Content.Root.Groups[0].Groups, g)
 		}
-		return
+		err := SaveDB(db, v)
+		if err != nil {
+			return err
+		}
+		return nil
 	}
 	// sub-group creation
-	newGroup := &gokeepasslib.Group{
-		Name: groupName,
+	newGroup := gokeepasslib.NewGroup()
+	newGroup.Name = groupName
+	parentGroup.Groups = append(parentGroup.Groups, newGroup)
+	err := SaveDB(db, v)
+	if err != nil {
+		return err
 	}
-	parentGroup.Groups = append(parentGroup.Groups, *newGroup)
+	return nil
 }
 
 func GetGroup(db *gokeepasslib.Database, groupName string) *gokeepasslib.Group {
-	for _, group := range db.Content.Root.Groups {
+	if len(db.Content.Root.Groups) > 0 && db.Content.Root.Groups[0].Name == groupName {
+		return &db.Content.Root.Groups[0]
+	}
+	if len(db.Content.Root.Groups) == 0 {
+		return nil
+	}
+	rootGroup := db.Content.Root.Groups[0]
+	for i, group := range rootGroup.Groups {
 		if group.Name == groupName {
-			return &group
+			return &db.Content.Root.Groups[0].Groups[i]
 		}
 	}
 	return nil
+}
+
+func GetParentGroupsIndex(db *gokeepasslib.Database, groupName string) (*gokeepasslib.Group, int) {
+	if len(db.Content.Root.Groups) > 0 && db.Content.Root.Groups[0].Name == groupName {
+		return &db.Content.Root.Groups[0], 0
+	}
+	if len(db.Content.Root.Groups) == 0 {
+		return nil, 0
+	}
+	rootGroup := db.Content.Root.Groups[0]
+	for i, group := range rootGroup.Groups {
+		if group.Name == groupName {
+			return &group, i
+		}
+	}
+	return nil, 0
 }
 
 func GetGroupEntry(group *gokeepasslib.Group, title string) *gokeepasslib.Entry {
-	for _, entry := range group.Entries {
+	for i, entry := range group.Entries {
 		if entry.GetTitle() == title {
-			return &entry
+			return &group.Entries[i]
 		}
 	}
 	return nil
 }
 
-func SaveGroupEntry(group *gokeepasslib.Group, title, username, password string) {
-	newEntry := gokeepasslib.Entry{
-		Values: []gokeepasslib.ValueData{
-			{Key: "Title", Value: gokeepasslib.V{Content: title}},
-			{Key: "Username", Value: gokeepasslib.V{Content: username}},
-			{Key: "Password", Value: gokeepasslib.V{Content: password}},
-		},
-	}
+func SaveGroupEntry(db *gokeepasslib.Database, group *gokeepasslib.Group, v *VaultInfo, title, username, password string) error {
+	newEntry := gokeepasslib.NewEntry()
+	vTitle := toValueData("Title", title)
+	vUser := toValueData("Username", username)
+	vPass := toProtectedValueData("Password", password)
+	newEntry.Values = append(newEntry.Values, vTitle)
+	newEntry.Values = append(newEntry.Values, vUser)
+	newEntry.Values = append(newEntry.Values, vPass)
 	group.Entries = append(group.Entries, newEntry)
+
+	err := SaveDB(db, v)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
-func CloseDB(db *gokeepasslib.Database) error {
+func toValueData(key, value string) gokeepasslib.ValueData {
+	return gokeepasslib.ValueData{Key: key, Value: gokeepasslib.V{Content: value}}
+}
+
+func toProtectedValueData(key, value string) gokeepasslib.ValueData {
+	return gokeepasslib.ValueData{
+		Key:   key,
+		Value: gokeepasslib.V{Content: value, Protected: w.NewBoolWrapper(true)},
+	}
+}
+
+func SaveDB(db *gokeepasslib.Database, v *VaultInfo) error {
+	if err := db.LockProtectedEntries(); err != nil {
+		return err
+	}
+	file, err := os.OpenFile(v.DBPath+"/"+v.DBFileName, os.O_RDWR, 0666)
+	if err != nil {
+		return err
+	}
+	keepassEncoder := gokeepasslib.NewEncoder(file)
+	if err := keepassEncoder.Encode(db); err != nil {
+		file.Close()
+		return err
+	}
+	file.Close()
+
+	newdb, err := OpenKeepassDatabase(v)
+	if err != nil {
+		return err
+	}
+	db = newdb
+	return nil
+}
+
+func CloseDB(db *gokeepasslib.Database, v *VaultInfo) error {
 	if db != nil {
 		if err := db.LockProtectedEntries(); err != nil {
 			return err
 		}
-		db = nil
 	}
+	file, err := os.OpenFile(v.DBPath+"/"+v.DBFileName, os.O_RDWR, 0666)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+	keepassEncoder := gokeepasslib.NewEncoder(file)
+	if err := keepassEncoder.Encode(db); err != nil {
+		return err
+	}
+	db = nil
 	return nil
 }
 
@@ -138,13 +233,27 @@ func PromptDBPath() (string, error) {
 	return dbPath, nil
 }
 
-func PromptEntryCredentials() (string, string, error) {
+func PromptEntryCredentials(titleRequired bool, titleOverride string) (string, string, string, error) {
+	var (
+		titlePrompt *textinput.TextInput
+		title       string
+		err         error
+	)
+	if titleRequired {
+		titlePrompt = textinput.New("Title: ")
+		titlePrompt.Placeholder = "Enter username"
+
+		title, err = titlePrompt.RunPrompt()
+		if err != nil {
+			return "", "", "", err
+		}
+	}
 	userPrompt := textinput.New("Username: ")
 	userPrompt.Placeholder = "Enter username"
 
 	username, err := userPrompt.RunPrompt()
 	if err != nil {
-		return "", "", err
+		return "", "", "", err
 	}
 
 	passPrompt := textinput.New("Password:")
@@ -164,10 +273,35 @@ func PromptEntryCredentials() (string, string, error) {
 
 	password, err := passPrompt.RunPrompt()
 	if err != nil {
-		return "", "", err
+		return "", "", "", err
 	}
 
-	return username, password, nil
+	confirmPassPrompt := textinput.New("Confirm Password:")
+	confirmPassPrompt.Placeholder = "Enter password"
+	confirmPassPrompt.Validate = func(s string) error {
+		if len(s) < 1 {
+			return fmt.Errorf("password cannot be empty")
+		}
+		if s != password {
+			return fmt.Errorf("passwords must match")
+		}
+		return nil
+	}
+	confirmPassPrompt.Hidden = true
+	confirmPassPrompt.Template += `
+	{{- if .ValidationError -}}
+		{{- print " " (Foreground "1" .ValidationError.Error) -}}
+	{{- end -}}`
+
+	confirmPassword, err := confirmPassPrompt.RunPrompt()
+	if err != nil {
+		return "", "", "", err
+	}
+	if password != confirmPassword {
+		return "", "", "", fmt.Errorf("password and confirmation do not match")
+	}
+
+	return title, username, password, nil
 }
 
 func DbUnlockPrompt() (string, error) {
