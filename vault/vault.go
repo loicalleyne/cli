@@ -126,6 +126,40 @@ func GetGroup(db *gokeepasslib.Database, groupName string) *gokeepasslib.Group {
 	return nil
 }
 
+// removes an entry from a Group.Entries[] and returns a bool indicating if it was found or not
+func DeleteGroup(db *gokeepasslib.Database, v *VaultInfo, parentGroup *gokeepasslib.Group, groupName string) error {
+	// top-level group deletion
+	if parentGroup == nil {
+		var groupSlice []gokeepasslib.Group
+		for i, group := range db.Content.Root.Groups[0].Groups {
+			if group.Name == groupName {
+				groupSlice = append(db.Content.Root.Groups[0].Groups[:i], db.Content.Root.Groups[0].Groups[i:]...)
+				db.Content.Root.Groups[0].Groups = groupSlice
+				break
+			}
+		}
+		err := SaveDB(db, v)
+		if err != nil {
+			return err
+		}
+		return nil
+	}
+	// sub-group deletion
+	var groupSlice []gokeepasslib.Group
+	for i, group := range parentGroup.Groups {
+		if group.Name == groupName {
+			groupSlice = append(parentGroup.Groups[:i], parentGroup.Groups[i:]...)
+			parentGroup.Groups = groupSlice
+			break
+		}
+	}
+	err := SaveDB(db, v)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func GetParentGroupsIndex(db *gokeepasslib.Database, groupName string) (*gokeepasslib.Group, int) {
 	if len(db.Content.Root.Groups) > 0 && db.Content.Root.Groups[0].Name == groupName {
 		return &db.Content.Root.Groups[0], 0
@@ -167,6 +201,19 @@ func SaveGroupEntry(db *gokeepasslib.Database, group *gokeepasslib.Group, v *Vau
 	}
 
 	return nil
+}
+
+// removes an entry from a Group.Entries[] and returns a bool indicating if it was found or not
+func DeleteGroupEntry(group *gokeepasslib.Group, title string) bool {
+	var newEntries []gokeepasslib.Entry
+	for i, entry := range group.Entries {
+		if entry.GetTitle() == title {
+			newEntries = append(group.Entries[:i], group.Entries[i:]...)
+			group.Entries = newEntries
+			return true
+		}
+	}
+	return false
 }
 
 func toValueData(key, value string) gokeepasslib.ValueData {
