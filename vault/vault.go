@@ -23,6 +23,27 @@ type (
 	}
 )
 
+func ChangeMasterPassword(db *gokeepasslib.Database, v *VaultInfo) error {
+	db.Credentials = gokeepasslib.NewPasswordCredentials(v.MasterPassword)
+	// Lock entries using stream cipher
+	if err := db.LockProtectedEntries(); err != nil {
+		return err
+	}
+
+	file, err := os.OpenFile(v.DBPath+"/"+v.DBFileName, os.O_RDWR, 0666)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	keepassEncoder := gokeepasslib.NewEncoder(file)
+	err = keepassEncoder.Encode(db)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func CreateNewKeepassDatabase(v *VaultInfo, groupName string) error {
 	db := gokeepasslib.NewDatabase(gokeepasslib.WithDatabaseKDBXVersion4())
 
