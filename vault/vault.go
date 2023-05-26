@@ -25,7 +25,7 @@ type (
 
 func ChangeMasterPassword(db *gokeepasslib.Database, v *VaultInfo) error {
 	db.Credentials = gokeepasslib.NewPasswordCredentials(v.MasterPassword)
-	// Lock entries using stream cipher
+
 	if err := db.LockProtectedEntries(); err != nil {
 		return err
 	}
