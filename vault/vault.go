@@ -7,6 +7,7 @@ import (
 	"go.uber.org/atomic"
 
 	"github.com/erikgeiser/promptkit/textinput"
+	"github.com/pterm/pterm"
 	"github.com/tobischo/gokeepasslib/v3"
 	w "github.com/tobischo/gokeepasslib/v3/wrappers"
 )
@@ -185,14 +186,18 @@ func GetGroupEntry(group *gokeepasslib.Group, title string) *gokeepasslib.Entry 
 	return nil
 }
 
-func SaveGroupEntry(db *gokeepasslib.Database, group *gokeepasslib.Group, v *VaultInfo, title, username, password string) error {
+func SaveGroupEntry(db *gokeepasslib.Database, group *gokeepasslib.Group, v *VaultInfo, title, username, password, url, notes string) error {
 	newEntry := gokeepasslib.NewEntry()
 	vTitle := toValueData("Title", title)
 	vUser := toValueData("UserName", username)
 	vPass := toProtectedValueData("Password", password)
+	vURL := toValueData("URL", url)
+	vNotes := toValueData("Notes", notes)
 	newEntry.Values = append(newEntry.Values, vTitle)
 	newEntry.Values = append(newEntry.Values, vUser)
 	newEntry.Values = append(newEntry.Values, vPass)
+	newEntry.Values = append(newEntry.Values, vURL)
+	newEntry.Values = append(newEntry.Values, vNotes)
 	group.Entries = append(group.Entries, newEntry)
 
 	err := SaveDB(db, v)
@@ -280,25 +285,23 @@ func PromptDBPath() (string, error) {
 	return dbPath, nil
 }
 
-func PromptEntryCredentials(titleRequired bool, titleOverride string) (string, string, string, error) {
+func PromptEntryCredentials(titleRequired, urlRequired, notesRequired bool, urlOverride, titleOverride string) (string, string, string, string, string, error) {
 	var (
-		titlePrompt *textinput.TextInput
-		title       string
-		err         error
+		title string
+		notes string
+		url   string
+		err   error
 	)
 	if titleRequired {
-		titlePrompt = textinput.New("Title: ")
-		titlePrompt.Placeholder = "Enter username"
-
-		title, err = titlePrompt.RunPrompt()
+		title, _ := pterm.DefaultInteractiveTextInput.WithDefaultText("Enter title:").WithMultiLine(false).Show()
 		if err != nil {
-			return "", "", "", err
+			return "", "", "", "", "", err
 		}
 	} else {
 		if titleOverride != "" {
 			title = titleOverride
 		} else {
-			return "", "", "", fmt.Errorf("override title not provided")
+			return "", "", "", "", "", fmt.Errorf("override title not provided")
 		}
 	}
 	userPrompt := textinput.New("Username: ")
@@ -306,7 +309,7 @@ func PromptEntryCredentials(titleRequired bool, titleOverride string) (string, s
 
 	username, err := userPrompt.RunPrompt()
 	if err != nil {
-		return "", "", "", err
+		return "", "", "", "", "", err
 	}
 
 	passPrompt := textinput.New("Password:")
@@ -326,7 +329,7 @@ func PromptEntryCredentials(titleRequired bool, titleOverride string) (string, s
 
 	password, err := passPrompt.RunPrompt()
 	if err != nil {
-		return "", "", "", err
+		return "", "", "", "", "", err
 	}
 
 	confirmPassPrompt := textinput.New("Confirm Password:")
@@ -348,13 +351,25 @@ func PromptEntryCredentials(titleRequired bool, titleOverride string) (string, s
 
 	confirmPassword, err := confirmPassPrompt.RunPrompt()
 	if err != nil {
-		return "", "", "", err
+		return "", "", "", "", "", err
 	}
 	if password != confirmPassword {
-		return "", "", "", fmt.Errorf("password and confirmation do not match")
+		return "", "", "", "", "", fmt.Errorf("password and confirmation do not match")
 	}
 
-	return title, username, password, nil
+	if urlRequired {
+		urlPrompt := textinput.New("URL: ")
+		urlPrompt.Placeholder = "Enter url"
+
+		url, err = urlPrompt.RunPrompt()
+		if err != nil {
+			return "", "", "", "", "", err
+		}
+	}
+	if notesRequired {
+		notes, _ := pterm.DefaultInteractiveTextInput.WithMultiLine().Show()
+	}
+	return title, username, password, url, notes, nil
 }
 
 func DbUnlockPrompt() (string, error) {
