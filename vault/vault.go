@@ -188,7 +188,7 @@ func GetGroupEntry(group *gokeepasslib.Group, title string) *gokeepasslib.Entry 
 func SaveGroupEntry(db *gokeepasslib.Database, group *gokeepasslib.Group, v *VaultInfo, title, username, password string) error {
 	newEntry := gokeepasslib.NewEntry()
 	vTitle := toValueData("Title", title)
-	vUser := toValueData("Username", username)
+	vUser := toValueData("UserName", username)
 	vPass := toProtectedValueData("Password", password)
 	newEntry.Values = append(newEntry.Values, vTitle)
 	newEntry.Values = append(newEntry.Values, vUser)
