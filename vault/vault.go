@@ -314,7 +314,7 @@ func PromptEntryCredentials(titleRequired, urlRequired, notesRequired bool, urlO
 		err   error
 	)
 	if titleRequired {
-		title, _ := pterm.DefaultInteractiveTextInput.WithDefaultText("Enter title:").WithMultiLine(false).Show()
+		title, _ = pterm.DefaultInteractiveTextInput.WithDefaultText("Enter title:").WithMultiLine(false).Show()
 		if err != nil {
 			return "", "", "", "", "", err
 		}
@@ -388,7 +388,7 @@ func PromptEntryCredentials(titleRequired, urlRequired, notesRequired bool, urlO
 		}
 	}
 	if notesRequired {
-		notes, _ := pterm.DefaultInteractiveTextInput.WithMultiLine().Show()
+		notes, _ = pterm.DefaultInteractiveTextInput.WithMultiLine().Show()
 	}
 	return title, username, password, url, notes, nil
 }
