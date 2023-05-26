@@ -8,7 +8,7 @@ import (
 
 	"github.com/erikgeiser/promptkit/textinput"
 	"github.com/pterm/pterm"
-	"github.com/tobischo/gokeepasslib/v3"
+	gokeepasslib "github.com/tobischo/gokeepasslib/v3"
 	w "github.com/tobischo/gokeepasslib/v3/wrappers"
 )
 
