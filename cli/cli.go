@@ -291,6 +291,8 @@ func (cli *Cli) Suspend() {
 	cli.Scanner.Config.Stdin.Close()
 	cli.Scanner.Operation.Close()
 	cli.Scanner.Terminal.Close()
+	t := new(time.Time)
+	cli.LastInteraction = *t
 }
 
 func (cli *Cli) Resume() {
@@ -299,6 +301,7 @@ func (cli *Cli) Resume() {
 		panic(err)
 	}
 	cli.Scanner = l
+	cli.LastInteraction = time.Now()
 	for {
 		// Get user input
 		fmt.Print(cli.Scanner.Config.Prompt)
