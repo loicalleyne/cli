@@ -282,3 +282,17 @@ func (cli *Cli) Run() {
 		}
 	}
 }
+
+func (cli *Cli) Restart() {
+	for {
+		// Get user input
+		fmt.Print(cli.Scanner.Config.Prompt)
+
+		text := cli.readline()
+
+		err := cli.findCommand(text)
+		if err != nil {
+			color.Red(err.Error())
+		}
+	}
+}
