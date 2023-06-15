@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/signal"
 	"strings"
+	"time"
 
 	"github.com/chzyer/readline"
 	"github.com/fatih/color"
@@ -16,10 +17,11 @@ import (
 
 // Cli structure contains configuration and commands
 type Cli struct {
-	Commands       []command.Command
-	ReadlineConfig *readline.Config
-	Scanner        *readline.Instance
-	Vault          vault.Database
+	Commands        []command.Command
+	ReadlineConfig  *readline.Config
+	LastInteraction time.Time
+	Scanner         *readline.Instance
+	Vault           vault.Database
 }
 
 func filterInput(r rune) (rune, bool) {
@@ -275,6 +277,7 @@ func (cli *Cli) Run() {
 		fmt.Print(cli.Scanner.Config.Prompt)
 
 		text := cli.readline()
+		cli.LastInteraction = time.Now()
 
 		err := cli.findCommand(text)
 		if err != nil {
@@ -283,12 +286,25 @@ func (cli *Cli) Run() {
 	}
 }
 
-func (cli *Cli) Restart() {
+func (cli *Cli) Suspend() {
+	cli.ReadlineConfig = cli.Scanner.Config.Clone()
+	cli.Scanner.Config.Stdin.Close()
+	cli.Scanner.Operation.Close()
+	cli.Scanner.Terminal.Close()
+}
+
+func (cli *Cli) Resume() {
+	l, err := readline.NewEx(cli.ReadlineConfig)
+	if err != nil {
+		panic(err)
+	}
+	cli.Scanner = l
 	for {
 		// Get user input
 		fmt.Print(cli.Scanner.Config.Prompt)
 
 		text := cli.readline()
+		cli.LastInteraction = time.Now()
 
 		err := cli.findCommand(text)
 		if err != nil {
